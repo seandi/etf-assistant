@@ -9,6 +9,7 @@ from app.web.utils import (
     load_etf_db,
     make_searchbar,
 )
+from app.web.ui.chart import display_chart
 from app.backend.chats.docqa import DocumentsQAChat
 
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
@@ -62,10 +63,16 @@ with ctitle:
     st.title(etf_name)
 
 
-overview_tab, documents_tab = st.tabs(["Overview", "Documentation"])
+overview_tab, performance_tab, documents_tab = st.tabs(
+    ["Overview", "Performance Chart", "Documentation"]
+)
 
 with overview_tab:
     st.dataframe(etf_df[etf_df["isin"] == st.query_params["isin"]])
+
+with performance_tab:
+    display_chart(isin=st.query_params["isin"])
+
 
 with documents_tab:
     if st.session_state.active_doc is None:
