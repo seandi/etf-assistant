@@ -2,6 +2,8 @@ from typing import Dict, List, Tuple
 import streamlit as st
 from dotenv import load_dotenv
 import base64
+import pandas as pd
+from datetime import datetime
 
 from app.web.storage.docs_storage import ETFDocStorage
 from app.web.utils import (
@@ -31,7 +33,8 @@ if "isin" not in st.query_params:
 
 # INITIALIZE SESSION
 etf_doc_storage = ETFDocStorage()
-etf_name = etf_df[etf_df["isin"] == st.query_params["isin"]]["name"].values[0]
+etf_data = etf_df[etf_df["isin"] == st.query_params["isin"]]
+etf_name = etf_data["name"].values[0]
 
 
 if "documents" not in st.session_state:
@@ -62,16 +65,65 @@ if "conversations" not in st.session_state:
 with ctitle:
     st.title(etf_name)
 
+    st.write(
+        f"**ISIN**: {etf_data['isin'].values[0]} &emsp;&emsp;&emsp; **Ticker**: {etf_data['ticker'].values[0]}"
+    )
 
-overview_tab, performance_tab, documents_tab = st.tabs(
-    ["Overview", "Performance Chart", "Documentation"]
-)
+
+overview_tab, documents_tab = st.tabs(["Overview", "Documentation"])
 
 with overview_tab:
-    st.dataframe(etf_df[etf_df["isin"] == st.query_params["isin"]])
+    ctable, cchart = st.columns([0.3, 0.7])
 
-with performance_tab:
-    display_chart(isin=st.query_params["isin"])
+    properties_mapping = {
+        "name": "Name",
+        "index": "Index",
+        "size": "Fund Size",
+        "ter": "TER",
+        "region": "Geographical region",
+        "instrument": "Instrument",
+        "asset": "Asset",
+        "dividends": "Dividends",
+        "currency": "Currency",
+        "domicile_country": "Domicile",
+        "replication": "Replication Method",
+        "strategy": "Strategy",
+        "number_of_holdings": "Holdings",
+        "inception_date": "Inception Date",
+    }
+    properties_display, values = [], []
+    for k, v in properties_mapping.items():
+        properties_display.append(v)
+
+        if k == "ter":
+            values.append(f"{etf_data[k].values[0]}%")
+        elif k == "size":
+            values.append(f"{int(etf_data[k].values[0]):,d} Milions")
+        elif k == "number_of_holdings":
+            values.append(f"{int(etf_data[k].values[0]):d}")
+
+        elif k == "inception_date":
+
+            d = datetime.strptime(etf_data[k].values[0], "%Y-%m-%d %H:%M:%S")
+            values.append(f"{d.strftime('%B %d, %Y')}")
+
+        else:
+            values.append(f"{etf_data[k].values[0]}")
+
+    ctable.text("")  # padding
+    ctable.dataframe(
+        pd.DataFrame({"Property": properties_display, "Value": values}),
+        column_config={
+            "Property": st.column_config.Column(width="small"),
+            "Value": st.column_config.Column(width="medium"),
+        },
+        hide_index=True,
+        use_container_width=True,
+        height=527,
+    )
+
+    with cchart:
+        display_chart(isin=st.query_params["isin"])
 
 
 with documents_tab:
