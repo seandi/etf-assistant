@@ -36,6 +36,8 @@ COLUMNS_DISPLAY_NAME = {
     "region": "Region",
 }
 
+WELCOME_MESSAGE_DOC_QA = """Hi, I can help you in finding information in this document. Do you have any question?"""
+
 
 def get_rand_str(n: int) -> str:
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=n))
@@ -237,6 +239,10 @@ def on_chat_button_click(doc_id):
     )
 
     st.session_state.chat = chat
+
+    if doc_id not in st.session_state.conversations:
+        st.session_state.conversations[doc_id] = []
+    st.session_state.conversations[doc_id].append(("ai", WELCOME_MESSAGE_DOC_QA))
 
 
 from dataclasses import dataclass
