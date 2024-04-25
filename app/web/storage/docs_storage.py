@@ -114,8 +114,7 @@ class ETFDocStorage:
     def get_documents(
         self,
         etf_isin: str,
-        doc_max_size: int | None = None,
-    ) -> List[Tuple[DocMetadata, str]]:
+    ) -> List[Tuple[DocMetadata, bytes]]:
 
         docs_metadata: List[DocMetadata] = self.docs_db.get_docs_by_etf(
             etf_isin=etf_isin
@@ -134,27 +133,7 @@ class ETFDocStorage:
                 save_folder=TMP_WORKING_FOLDER,
             )
             with open(doc_tmp_path, "rb") as f:
-                _doc_bytes = f.read()
-
-                doc_bytes = []
-                if doc_max_size is not None:
-                    original_doc = Document("pdf", _doc_bytes)
-                    n_chunks = math.ceil(len(_doc_bytes) / doc_max_size)
-                    pages_per_chunk = original_doc.page_count // n_chunks
-                    for page_start in range(
-                        0, original_doc.page_count, pages_per_chunk
-                    ):
-                        doc_chunk = Document()
-                        doc_chunk.insert_pdf(
-                            original_doc,
-                            from_page=page_start,
-                            to_page=min(
-                                page_start + pages_per_chunk, original_doc.page_count
-                            ),
-                        )
-                        doc_bytes.append(doc_chunk.write())
-                else:
-                    doc_bytes.append(_doc_bytes)
+                doc_bytes = f.read()
 
             docs.append((doc_metadata, doc_bytes))
 

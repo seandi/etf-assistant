@@ -7,6 +7,8 @@ import pandas as pd
 import random
 import string
 from loguru import logger
+from fitz import Document
+import math
 
 from app.web.storage.docs_db import DocMetadata
 
@@ -165,13 +167,13 @@ def make_searchbar(etf_df: pd.DataFrame, name: str, go_new_page: bool = True):
 def create_doc_panel(
     doc_key: str, doc: Tuple[DocMetadata, bytes], collapsed: bool = False
 ):
-    metadata, doc_view_data = doc
+    metadata, doc_data = doc
+
     cont = st.container(
         border=True,
     )
     with cont:
         if collapsed:
-
             st.text(f"📄 {metadata.name}")
             st.button(
                 "Chat" if st.session_state.active_doc != doc_key else "Close",
@@ -192,7 +194,8 @@ def create_doc_panel(
                 "Download",
                 use_container_width=True,
                 key="download_doc" + str(doc_key),
-                data="test",
+                file_name=f"{metadata.name}.pdf",
+                data=doc_data,
             )
             cchat.button(
                 "Chat" if st.session_state.active_doc != doc_key else "Close",
@@ -213,10 +216,12 @@ def on_chat_button_click(doc_id):
         st.session_state.chat = None
         return
 
-    doc_metadata, doc_view_data = st.session_state.documents[doc_id]
+    doc_metadata, doc_data = st.session_state.documents[doc_id]
     doc_metadata: DocMetadata
 
-    st.session_state.doc_view_data = doc_view_data
+    st.session_state.doc_view_data = split_document(
+        doc_data=doc_data, max_size=int(os.environ["DOC_VIEW_MAX_SIZE"])
+    )
     st.session_state.doc_view_page = 1
 
     st.session_state.active_doc = doc_id
@@ -253,3 +258,24 @@ class DocQAMessage:
     role: str
     message: str
     sources: List
+
+
+def split_document(doc_data: bytes, max_size: int) -> List[bytes]:
+    """
+    Split the input document into smaller chunks such that each chunk contains at most max_size bytes.
+    """
+    doc_view_chunks = []
+
+    original_doc = Document("pdf", doc_data)
+    n_chunks = math.ceil(len(doc_data) / max_size)
+    pages_per_chunk = original_doc.page_count // n_chunks
+    for page_start in range(0, original_doc.page_count, pages_per_chunk):
+        doc_chunk = Document()
+        doc_chunk.insert_pdf(
+            original_doc,
+            from_page=page_start,
+            to_page=min(page_start + pages_per_chunk, original_doc.page_count),
+        )
+        doc_view_chunks.append(doc_chunk.write())
+
+    return doc_view_chunks

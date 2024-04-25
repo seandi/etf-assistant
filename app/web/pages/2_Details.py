@@ -38,9 +38,7 @@ etf_name = etf_data["name"].values[0]
 
 
 if "documents" not in st.session_state:
-    docs = etf_doc_storage.get_documents(
-        etf_isin=st.query_params["isin"], doc_max_size=1024**2
-    )
+    docs = etf_doc_storage.get_documents(etf_isin=st.query_params["isin"])
     st.session_state.documents = {doc[0].id: doc for doc in docs}
 
 # Controls which document is currently in use for chat/view (if any)
@@ -101,12 +99,9 @@ with overview_tab:
             values.append(f"{int(etf_data[k].values[0]):,d} Milions")
         elif k == "number_of_holdings":
             values.append(f"{int(etf_data[k].values[0]):d}")
-
         elif k == "inception_date":
-
             d = datetime.strptime(etf_data[k].values[0], "%Y-%m-%d %H:%M:%S")
             values.append(f"{d.strftime('%B %d, %Y')}")
-
         else:
             values.append(f"{etf_data[k].values[0]}")
 
