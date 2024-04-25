@@ -4,7 +4,7 @@ from streamlit_echarts import st_echarts
 from justetf_scraping import load_chart
 
 
-def display_chart(isin: str):
+def display_chart(ref: st, isin: str):
     try:
         with st.spinner():
             chart_data = load_chart(isin=isin)
@@ -18,39 +18,40 @@ def display_chart(isin: str):
     data = [(str(t[0]), t[1]) for t in data]
     highest = chart_data["quote"].max()
 
-    st_echarts(
-        options={
-            "toolbox": {
-                "feature": {
-                    "restore": {},
-                }
-            },
-            "xAxis": {"type": "time"},
-            "yAxis": {
-                "type": "value",
-                "boundaryGap": [0, "100%"],
-                "name": "Quotes",
-                # "max": int(highest * 1.2),
-            },
-            "series": [
-                {
-                    "data": data,
-                    "type": "line",
-                    "symbol": "none",
-                    "color": "ligthblue",
-                    "areaStyle": {"color": "lightblue"},
-                }
-            ],
-            "dataZoom": [
-                {
-                    "type": "inside",
-                    "startValue": data[0][0],
+    with ref:
+        st_echarts(
+            options={
+                "toolbox": {
+                    "feature": {
+                        "restore": {},
+                    }
                 },
-                {
-                    "type": "slider",
-                    "startValue": data[0][0],
+                "xAxis": {"type": "time"},
+                "yAxis": {
+                    "type": "value",
+                    "boundaryGap": [0, "100%"],
+                    "name": "Quotes",
+                    # "max": int(highest * 1.2),
                 },
-            ],
-        },
-        height="600px",
-    )
+                "series": [
+                    {
+                        "data": data,
+                        "type": "line",
+                        "symbol": "none",
+                        "color": "ligthblue",
+                        "areaStyle": {"color": "lightblue"},
+                    }
+                ],
+                "dataZoom": [
+                    {
+                        "type": "inside",
+                        "startValue": data[0][0],
+                    },
+                    {
+                        "type": "slider",
+                        "startValue": data[0][0],
+                    },
+                ],
+            },
+            height="600px",
+        )

@@ -2,7 +2,8 @@ import streamlit as st
 from dotenv import load_dotenv
 import os
 
-from app.web.utils import load_etf_db, make_searchbar
+from app.web.utils import load_etf_db
+from app.web.ui import make_searchbar
 
 
 st.set_page_config(layout="centered", menu_items={"About": "search"})

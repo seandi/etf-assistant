@@ -1,22 +1,21 @@
-from typing import Dict, List, Tuple
 import streamlit as st
 from dotenv import load_dotenv
-import base64
-import pandas as pd
-from datetime import datetime
 
 from app.web.storage.docs_storage import ETFDocStorage
-from app.web.utils import (
-    create_doc_panel,
-    load_etf_db,
+from app.web.utils import load_etf_db, create_docqa_chat
+from app.web.ui import (
+    display_chart,
     make_searchbar,
+    display_overview_table,
+    display_doc_panel,
+    display_doc_view,
 )
-from app.web.ui.chart import display_chart
+from app.web.ui.documents import WELCOME_MESSAGE_DOC_QA
 from app.backend.chats.docqa import DocumentsQAChat
 
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 
-# Handle Missing ISIN
+
 load_dotenv(override=True)
 etf_df = load_etf_db()
 
@@ -33,13 +32,10 @@ if "isin" not in st.query_params:
 
 # INITIALIZE SESSION
 etf_doc_storage = ETFDocStorage()
-etf_data = etf_df[etf_df["isin"] == st.query_params["isin"]]
-etf_name = etf_data["name"].values[0]
-
-
-if "documents" not in st.session_state:
-    docs = etf_doc_storage.get_documents(etf_isin=st.query_params["isin"])
-    st.session_state.documents = {doc[0].id: doc for doc in docs}
+etf_data = etf_df[etf_df["isin"] == st.query_params["isin"]].iloc[0]
+etf_name = etf_data["name"]
+etf_isin = st.query_params["isin"]
+docs = etf_doc_storage.get_documents(etf_isin=etf_isin)
 
 # Controls which document is currently in use for chat/view (if any)
 if "active_doc" not in st.session_state:
@@ -48,11 +44,10 @@ if "active_doc" not in st.session_state:
 # Holds the doc data of the currently active doc for the viewer to display
 if "doc_view_data" not in st.session_state:
     st.session_state.doc_view_data = None
-    st.session_state.doc_view_page = 1
 
-# Holds the Chat object for the active document
-if "chat" not in st.session_state:
-    st.session_state.chat = None
+# Holds the Chats object for documents
+if "chats" not in st.session_state:
+    st.session_state.chats = {}
 
 # Stores the conversations for all documents that have one
 if "conversations" not in st.session_state:
@@ -62,63 +57,16 @@ if "conversations" not in st.session_state:
 # BUILD PAGE LAYOUT
 with ctitle:
     st.title(etf_name)
-
     st.write(
-        f"**ISIN**: {etf_data['isin'].values[0]} &emsp;&emsp;&emsp; **Ticker**: {etf_data['ticker'].values[0]}"
+        f"**ISIN**: {etf_data['isin']} &emsp;&emsp;&emsp; **Ticker**: {etf_data['ticker']}"
     )
-
 
 overview_tab, documents_tab = st.tabs(["Overview", "Documentation"])
 
 with overview_tab:
     ctable, cchart = st.columns([0.3, 0.7])
-
-    properties_mapping = {
-        "name": "Name",
-        "index": "Index",
-        "size": "Fund Size",
-        "ter": "TER",
-        "region": "Geographical region",
-        "instrument": "Instrument",
-        "asset": "Asset",
-        "dividends": "Dividends",
-        "currency": "Currency",
-        "domicile_country": "Domicile",
-        "replication": "Replication Method",
-        "strategy": "Strategy",
-        "number_of_holdings": "Holdings",
-        "inception_date": "Inception Date",
-    }
-    properties_display, values = [], []
-    for k, v in properties_mapping.items():
-        properties_display.append(v)
-
-        if k == "ter":
-            values.append(f"{etf_data[k].values[0]}%")
-        elif k == "size":
-            values.append(f"{int(etf_data[k].values[0]):,d} Milions")
-        elif k == "number_of_holdings":
-            values.append(f"{int(etf_data[k].values[0]):d}")
-        elif k == "inception_date":
-            d = datetime.strptime(etf_data[k].values[0], "%Y-%m-%d %H:%M:%S")
-            values.append(f"{d.strftime('%B %d, %Y')}")
-        else:
-            values.append(f"{etf_data[k].values[0]}")
-
-    ctable.text("")  # padding
-    ctable.dataframe(
-        pd.DataFrame({"Property": properties_display, "Value": values}),
-        column_config={
-            "Property": st.column_config.Column(width="small"),
-            "Value": st.column_config.Column(width="medium"),
-        },
-        hide_index=True,
-        use_container_width=True,
-        height=527,
-    )
-
-    with cchart:
-        display_chart(isin=st.query_params["isin"])
+    display_overview_table(ref=ctable, etf_data=etf_data)
+    display_chart(ref=cchart, isin=etf_isin)
 
 
 with documents_tab:
@@ -128,21 +76,17 @@ with documents_tab:
         rdocs, rview, rchat = st.columns([0.15, 0.55, 0.3])
 
     with rdocs:
-        st.container()
-
-        docs = st.session_state["documents"]
-
         if docs:
-            for doc_id, doc in docs.items():
-                create_doc_panel(
-                    doc_key=doc_id,
-                    doc=doc,
-                    collapsed=st.session_state.active_doc is not None,
+            for doc in docs:
+                display_doc_panel(
+                    doc=doc, collapsed=st.session_state.active_doc is not None
                 )
         else:
             st.write("No documents were found for this ETF!")
 
-    if st.session_state.active_doc is not None:
+    if st.session_state.active_doc is None:
+        question, messages_container, reset_button = None, None, None
+    else:
         with rview:
             view_controller = st.container()
             doc_view = st.empty()
@@ -154,50 +98,47 @@ with documents_tab:
                 c1.warning(
                     "Document is too large to be loaded entirely, it has been split in multiple views!",
                 )
-
-                view_slider = c2.slider(
+                view_page = c2.slider(
                     label="Document view",
                     min_value=1,
                     max_value=len(doc_view_data),
-                    value=st.session_state.doc_view_page,
                 )
-                if view_slider != st.session_state.doc_view_page:
-                    st.session_state.doc_view_page = view_slider
+        else:
+            view_page = 1
 
-                    st.rerun()
-
-        doc_base64_prop = base64.b64encode(
-            doc_view_data[st.session_state.doc_view_page - 1]
-        ).decode("utf-8")
-        pdf_display = f'<iframe src="data:application/pdf;base64,{doc_base64_prop}" width=100% height="700" type="application/pdf"></iframe>'
-        doc_view.markdown(pdf_display, unsafe_allow_html=True)
+        display_doc_view(
+            ref=doc_view,
+            doc_view_data=doc_view_data[view_page - 1],
+        )
 
         with rchat:
-            chat: DocumentsQAChat = st.session_state.chat
             reset_button = st.button("Restart conversation", use_container_width=True)
-            messages_container = st.container(border=True, height=600)
+            messages_container = st.container(border=True, height=650)
             question = st.chat_input()
 
-            for message in st.session_state.conversations.get(
-                st.session_state.active_doc, []
-            ):
-                messages_container.chat_message(name=message[0]).write(message[1])
+# CHAT LOGIC
+for message in st.session_state.conversations.get(st.session_state.active_doc, []):
+    messages_container.chat_message(name=message[0]).write(message[1])
 
-            if question:
+if st.session_state.active_doc and question:
+    active_doc_id = st.session_state.active_doc
 
-                doc_id = st.session_state.active_doc
-                if doc_id not in st.session_state.conversations:
-                    st.session_state.conversations[doc_id] = []
-                st.session_state.conversations[doc_id].append(("user", question))
+    st.session_state.conversations[active_doc_id].append(("user", question))
+    messages_container.chat_message(name="user").write(question)
 
-                messages_container.chat_message(name="user").write(question)
+    answer, sources = st.session_state.chats[active_doc_id].chat(question=question)
 
-                # answer = "answer"
-                answer, sources = chat.chat(question=question)
-                print(sources)
-                st.session_state.conversations[doc_id].append(("ai", answer))
-                messages_container.chat_message(name="ai").write(answer)
+    st.session_state.conversations[active_doc_id].append(("ai", answer))
+    messages_container.chat_message(name="ai").write(answer)
 
-            if reset_button:
-                st.session_state.conversations[st.session_state.active_doc] = []
-                st.rerun()
+if reset_button:
+    for doc in docs:
+        if doc[0].id == active_doc_id:
+            active_doc_metadata = doc[0]
+            break
+    st.session_state.chats[active_doc_id] = create_docqa_chat(
+        doc_metadata=active_doc_metadata
+    )
+    st.session_state.conversations[active_doc_id] = []
+    st.session_state.conversations[active_doc_id].append(("ai", WELCOME_MESSAGE_DOC_QA))
+    st.rerun()
