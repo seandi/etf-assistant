@@ -10,7 +10,10 @@ from app.web.utils import load_etf_db
 
 dotenv.load_dotenv(override=True)
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
-
+st.markdown(
+    " <style> div[class^='block-container'] { padding-top: 2rem; } </style> ",
+    unsafe_allow_html=True,
+)
 
 docs_db = ETFDocumentsDatabase(db_path=os.environ.get("DOC_DB"))
 docs_storage = ETFDocStorage()

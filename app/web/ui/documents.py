@@ -36,13 +36,13 @@ def display_doc_panel(doc: Tuple[DocMetadata, bytes], collapsed: bool = False):
             cchat = st.empty()
             cdownload = st.empty()
         else:
-            cdownload, cchat = st.columns(2)
+            cchat, cdownload = st.columns(2)
 
         chat_button = cchat.button(
             "Chat" if st.session_state.active_doc != doc_id else "Close",
             key="view" + str(doc_id),
             use_container_width=True,
-            type=("primary" if st.session_state.active_doc == doc_id else "secondary"),
+            type="primary",
         )
 
         cdownload.download_button(

@@ -26,20 +26,32 @@ def display_chart(ref: st, isin: str):
                         "restore": {},
                     }
                 },
+                "tooltip": {
+                    "trigger": "axis",
+                },
                 "xAxis": {"type": "time"},
                 "yAxis": {
                     "type": "value",
-                    "boundaryGap": [0, "100%"],
+                    "boundaryGap": ["20%", "10%"],
+                    "scale": True,
                     "name": "Quotes",
+                    "nameLocation": "center",
+                    "nameGap": 30,
                     # "max": int(highest * 1.2),
                 },
                 "series": [
                     {
+                        "name": "Quote",
+                        "sampling": "lttb",
                         "data": data,
                         "type": "line",
                         "symbol": "none",
-                        "color": "ligthblue",
-                        "areaStyle": {"color": "lightblue"},
+                        "color": st._config.get_option("theme.primaryColor"),
+                        "areaStyle": {
+                            "color": st._config.get_option(
+                                "theme.secondaryBackgroundColor"
+                            )
+                        },
                     }
                 ],
                 "dataZoom": [

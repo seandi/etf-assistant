@@ -14,19 +14,22 @@ from app.web.ui.documents import WELCOME_MESSAGE_DOC_QA
 from app.backend.chats.docqa import DocumentsQAChat
 
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
-
+st.markdown(
+    " <style> div[class^='block-container'] { padding-top: 2rem; } </style> ",
+    unsafe_allow_html=True,
+)
 
 load_dotenv(override=True)
 etf_df = load_etf_db()
 
-ctitle, csearch = st.columns([0.7, 0.3])
+ctitle, csearch = st.columns([0.65, 0.35])
 
 with csearch:
     make_searchbar(etf_df=etf_df, name="details", go_new_page=False)
 
 if "isin" not in st.query_params:
     with ctitle:
-        st.title("No ETF appears to have been selected yet...")
+        st.write("# No ETF have been selected yet!")
     st.stop()
 
 
@@ -56,7 +59,7 @@ if "conversations" not in st.session_state:
 
 # BUILD PAGE LAYOUT
 with ctitle:
-    st.title(etf_name)
+    st.write(f"# {etf_name}")
     st.write(
         f"**ISIN**: {etf_data['isin']} &emsp;&emsp;&emsp; **Ticker**: {etf_data['ticker']}"
     )
@@ -74,6 +77,7 @@ with documents_tab:
         _, rdocs, _ = st.columns([0.35, 0.3, 0.35])
     else:
         rdocs, rview, rchat = st.columns([0.15, 0.55, 0.3])
+        view_page_selector = rdocs.empty()
 
     with rdocs:
         if docs:
@@ -87,34 +91,36 @@ with documents_tab:
     if st.session_state.active_doc is None:
         question, messages_container, reset_button = None, None, None
     else:
+        if len(st.session_state["doc_view_data"]) > 1:
+            with view_page_selector.container(border=True):
+                doc_view_page = st.slider(
+                    label="Document view",
+                    min_value=1,
+                    max_value=len(st.session_state["doc_view_data"]),
+                )
+        else:
+            doc_view_page = 1
+
         with rview:
             view_controller = st.container()
             doc_view = st.empty()
 
-        doc_view_data = st.session_state["doc_view_data"]
-        if len(doc_view_data) > 1:
-            with view_controller:
-                c1, c2 = st.columns([0.65, 0.35])
-                c1.warning(
-                    "Document is too large to be loaded entirely, it has been split in multiple views!",
-                )
-                view_page = c2.slider(
-                    label="Document view",
-                    min_value=1,
-                    max_value=len(doc_view_data),
-                )
-        else:
-            view_page = 1
-
         display_doc_view(
             ref=doc_view,
-            doc_view_data=doc_view_data[view_page - 1],
+            doc_view_data=st.session_state["doc_view_data"][doc_view_page - 1],
         )
 
         with rchat:
-            reset_button = st.button("Restart conversation", use_container_width=True)
             messages_container = st.container(border=True, height=650)
-            question = st.chat_input()
+            col_input, col_reset = st.columns([0.8, 0.2])
+            question = col_input.chat_input()
+            reset_button = col_reset.button(
+                "Reset",
+                use_container_width=True,
+                type="primary",
+                help="Reset the conversation",
+            )
+
 
 # CHAT LOGIC
 for message in st.session_state.conversations.get(st.session_state.active_doc, []):

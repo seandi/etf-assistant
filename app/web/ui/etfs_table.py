@@ -1,8 +1,10 @@
 import streamlit as st
 import os
 import pandas as pd
+from dotenv import load_dotenv
 
-DETILS_PAGE_URL = os.environ["UI_ROOT_URL"] + os.environ["DETAILS_PAGE_PATH"]
+load_dotenv()
+DETILS_PAGE_URL = os.environ["UI_ROOT_URL"] + os.environ["ANALYTICS_PAGE_PATH"]
 
 EXCHANGE_COLUMNS = [
     "Borsa Italiana",
@@ -28,7 +30,7 @@ COLUMNS_DISPLAY_NAME = {
 
 def display_table(ref, etf_df: pd.DataFrame, height=None):
 
-    if DETILS_PAGE_URL not in etf_df["isin"].values[0]:
+    if len(etf_df) and DETILS_PAGE_URL not in etf_df["isin"].values[0]:
         link_isin_to_page(etf_df=etf_df)
 
     table_config = {
