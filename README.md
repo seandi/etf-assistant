@@ -79,7 +79,7 @@ The *ETF Screener* page displays a list of all available ETFs alongside a chat i
 
 The diagram below describes the process by which the chatbot generates answers to user questions. Highlighted blocks indicate key steps involving a request to an LLM (similarity search also uses an LLM). The process is implemented using LangChain and leverages GPT-3.5-turbo as the LLM, though any similarly performing LLM that supports function calls can be used.
 
-![alt text](resources/text2sql_no_bg.png)
+![alt text](resources/text2sql_white.png)
 
 Chatbots designed to answer user questions that require fetching data from a database are often implemented as agents. These agents operate as cyclic processes where the Language Model (LLM) repeatedly generates arguments to call predefined functions, collects results, and continues until it believes it has enough information to provide a final answer. Typically, these functions include:
 - One for retrieving the schema of tables needed to answer the question.
@@ -125,7 +125,7 @@ Users can open a chat with each document to ask questions about its content. The
 
 The diagram below illustrates how the document is pre-processed and added to the vector database (left) and how the chatbot accesses it to retrieve relevant information and use it to answer the user's question (right).
 
-![documents qa](resources/rag_no_bg.png)
+![documents qa](resources/rag_white.png)
 
 #### Chunking the Documents
 The document is first processed through a Layout Analysis module that extracts text, tables, and images from the document, and optionally, information on the text layout (e.g., title, header, paragraph).
