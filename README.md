@@ -15,7 +15,7 @@ Popular ETF websites usually feature a page allowing users to navigate the entir
 
 In this project, I implemented a similar page (*ETF Screener*), replacing the filters with a chatbot interface. Users can directly describe in natural language the types of ETFs they are looking for, and the AI will convert the request into a database query and present the results. This approach offers a more intuitive interface and more flexible search options, not being limited to preset filters.
 
-<video controls src="resources/smart-screener.mp4" title="Smart Screener"></video>
+<video controls src="https://github.com/seandi/etf-assistant/assets/39460992/f480e22f-eebb-4dc6-bf92-f9430880795d" title="Smart Screener"></video>
 
 At its core, this feature uses an LLM to convert natural language questions into SQL queries. However, many additional techniques are employed to ensure the chatbot is robust.
 
@@ -25,7 +25,7 @@ ETF websites have a page presenting information on individual ETFs, typically in
 
 This project includes an *ETF analytics* page for each fund, showing its overview, past performance, and official documentation. The various documents released by issuers tend to be technical and lengthy, making detailed information less accessible to users. To address this, *ETF Assistant* features a chatbot that can directly answer detailed questions, saving users from having to read through extensive documentation.
 
-<video controls src="resources/docs-qa.mp4" title="Documents Q&A"></video>
+<video controls src="https://github.com/seandi/etf-assistant/assets/39460992/174df23e-d1ef-441b-96e3-02c2a3799d65" title="Documents Q&A"></video>
 
 This feature is implemented as a RAG (Retrieval-Augmented Generation) chatbot, connecting the LLM with the relevant body of knowledge.
 
