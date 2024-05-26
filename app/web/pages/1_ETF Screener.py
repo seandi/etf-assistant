@@ -89,7 +89,7 @@ if question:
     answer, etfs_filtered_df = chat.chat(question=question)
 
     st.session_state.search_chat_history.append(("ai", answer))
-    if len(etfs_filtered_df):
+    if etfs_filtered_df is not None and len(etfs_filtered_df):
         st.session_state.tables_history[question] = etfs_filtered_df
 
     messages_container.chat_message(name="ai").write(answer)

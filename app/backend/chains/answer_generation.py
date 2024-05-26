@@ -1,13 +1,6 @@
 from typing import List, Dict
-import json
 from operator import itemgetter
-from langchain_core.prompts import (
-    SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-    AIMessagePromptTemplate,
-    MessagesPlaceholder,
-    ChatPromptTemplate,
-)
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 from langchain.memory.chat_memory import BaseChatMemory
@@ -103,7 +96,6 @@ class AnswerGenerationChain:
     def run(
         self,
         question: str,
-        query: str,
         results: List,
         suggestions: List[str],
         callbacks: List = [],

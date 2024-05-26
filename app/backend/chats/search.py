@@ -91,31 +91,37 @@ class ETFSearchChat:
         )
 
     def chat(self, question: str) -> Tuple[str, pd.DataFrame | None]:
-        query = self.query_chain.run(question=question)
+        query, answer = self.query_chain.run(question=question)
         logger.info(f"Generated the following query: {query}")
 
-        if query is None or "*" not in query:
-            raise NotImplementedError
+        if query is None and answer is None:
+            return "I am sorry but I was not able to generate a valid response!", None
 
-        etfs_found_df = self.etf_db.run_query(query=query)
-        # print(etfs_found_df.columns.to_list())
-        results_to_pass = etfs_found_df.drop(
-            columns=[
-                c for c in etfs_found_df.columns.to_list() if c not in COLUMNS_TO_PASS
-            ]
-        ).values.tolist()
-
-        if len(etfs_found_df) > MAX_ROWS_TO_PASS:
-            suggestions = self.find_suggestions(etfs_df=etfs_found_df, n=N_SUGGESTIONS)
+        if query is None:
+            etfs_found_df = None
         else:
-            suggestions = None
+            etfs_found_df = self.etf_db.run_query(query=query)
+            # print(etfs_found_df.columns.to_list())
+            results_to_pass = etfs_found_df.drop(
+                columns=[
+                    c
+                    for c in etfs_found_df.columns.to_list()
+                    if c not in COLUMNS_TO_PASS
+                ]
+            ).values.tolist()
 
-        answer = self.answer_chain.run(
-            question=question,
-            query=query,
-            results=results_to_pass,
-            suggestions=suggestions,
-        )
+            if len(etfs_found_df) > MAX_ROWS_TO_PASS:
+                suggestions = self.find_suggestions(
+                    etfs_df=etfs_found_df, n=N_SUGGESTIONS
+                )
+            else:
+                suggestions = None
+
+            answer = self.answer_chain.run(
+                question=question,
+                results=results_to_pass,
+                suggestions=suggestions,
+            )
 
         self.memory.save_context(
             inputs={"question": question}, outputs={"answer": answer}
