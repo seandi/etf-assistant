@@ -138,6 +138,8 @@ if st.session_state.active_doc and question:
     messages_container.chat_message(name="ai").write(answer)
 
 if reset_button:
+    active_doc_id = st.session_state.active_doc
+
     for doc in docs:
         if doc[0].id == active_doc_id:
             active_doc_metadata = doc[0]
