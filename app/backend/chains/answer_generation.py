@@ -16,43 +16,45 @@ from langchain_community.utilities.sql_database import SQLDatabase
 from langfuse.callback import CallbackHandler
 
 
-ANSWER_GENERATION_SYSTEM_PROMPT = """You are assistant designed to generate a correct SQL query to find all information necessary to answer the user question from an sqlite database containing the tables described below.
+ANSWER_TEMPLATE_FEW_ETFS = """Your task is to repsond to the user question based solely on the previous messagges in the conversation and the list of ETFs found in the database. If no ETFs were found, you should simply respond saying so.
 
-Tables description:
-{tables}
+Question:
+{question}
 
+Previous messages:
+{history}
 
-You should always respond with a JSON object with a single key 'query' that contains the generated query.
-"""
-
-QUERY_RECALL_SELF_PROMPT = """To answer the user question I have generated the SQL query reported below on a database with tables described below.
-Tables description:
-{tables}
-
-Generated query:
-{query} 
-"""
-
-NO_RESULT_SELF_PROMPT = """
-I have found no ETF matching the user request.
-"""
-
-
-PARTIAL_RESULT_SELF_PROMPT = """I have found all the ETFs in the database the match the user request and they will be shown on screen in a table.
-Below are reported the Name and ISIN of just a few sample ETFs among those. 
-
-ETF samples:
+ETFs found in the database:
 {results}
-
-I should answer the user using these samples to provide some example of ETF that match the request, however I MUST recall to the user that these are just a few example and that there may be other ETFs that match his/her requirements. I should prompt the user to provide more details such that I can help narrow down the selection of ETFs, I should ask for more information on {suggestions}.
 """
 
-FULL_RESULT_SELF_PROMPT = """I have found all the ETFs in the database the match the user request. Below are reported the Name and ISIN of all the ETFs I have found. 
+# ANSWER_TEMPLATE_MANY_ETFS = """Your task is to repsond to the user question by informing him/her on the number of ETFs that were found in the database and inviting him/her to consult the table on the left containing the ETFs found (the table will be shown by the frontend, its not jour job to create it).
 
-ETFs:
-{results}
+# Question:
+# {question}
 
-I should report these results to the user and remember to him/her that additional details on the ETFs found are reported on screen in the corresponding table.
+# Previous messages:
+# {history}
+
+# Number of ETFs found:
+# {n_results}
+
+# """
+
+ANSWER_TEMPLATE_MANY_ETFS = """Your task is to repsond to the user question by informing him/her on the number of ETFs that were found in the database and inviting him/her to consult the table on the left containing the ETFs found (the table will be shown by the frontend, its not jour job to create it).
+Your are also provided with some suggestions of possible additional information that you can invite to user to provide for further narrowing down the search.
+
+Question:
+{question}
+
+Previous messages:
+{history}
+
+Number of ETFs found:
+{n_results}
+
+Suggestions:
+{suggestions}
 """
 
 
@@ -69,37 +71,17 @@ class AnswerGenerationChain:
         self.memory = memory
         self.max_rows_to_pass = max_rows_to_pass
 
-        chain_additional_inputs = {}
-        if self.memory is not None:
-            chain_additional_inputs["history"] = RunnableLambda(
-                self.memory.load_memory_variables
-            ) | itemgetter("history")
+        chain_additional_inputs = {
+            "history": RunnableLambda(self.memory.load_memory_variables)
+            | itemgetter("history")
+        }
 
         self.chain = RunnablePassthrough.assign(
             **chain_additional_inputs
         ) | RunnableLambda(self.make_answer_chain)
 
     def make_answer_chain(self, chain_inputs: Dict):
-        n_results = len(chain_inputs["results"])
-
-        prompt_messages = []
-        if self.memory is not None:
-            prompt_messages.append(MessagesPlaceholder("history"))
-        prompt_messages.extend(
-            [
-                HumanMessagePromptTemplate.from_template("{question}"),
-                AIMessagePromptTemplate.from_template(QUERY_RECALL_SELF_PROMPT),
-            ]
-        )
-
-        if n_results == 0:
-            template = NO_RESULT_SELF_PROMPT
-        if n_results > self.max_rows_to_pass:
-            template = PARTIAL_RESULT_SELF_PROMPT
-        else:
-            template = FULL_RESULT_SELF_PROMPT
-
-        prompt_messages.append(AIMessagePromptTemplate.from_template(template))
+        n_results = chain_inputs["n_results"]
 
         chain = (
             RunnablePassthrough.assign(
@@ -107,7 +89,11 @@ class AnswerGenerationChain:
                     inputs["results"][: min(n_results, self.max_rows_to_pass)]
                 )
             )
-            | ChatPromptTemplate.from_messages(prompt_messages)
+            | ChatPromptTemplate.from_template(
+                ANSWER_TEMPLATE_MANY_ETFS
+                if n_results > self.max_rows_to_pass
+                else ANSWER_TEMPLATE_FEW_ETFS
+            )
             | ChatOpenAI()
             | StrOutputParser()
         )
@@ -125,9 +111,8 @@ class AnswerGenerationChain:
         answer = self.chain.invoke(
             {
                 "question": question,
-                "tables": self.tables_description,
-                "query": query,
                 "results": results,
+                "n_results": len(results),
                 "suggestions": suggestions,
             },
             config={"callbacks": callbacks},
