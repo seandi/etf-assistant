@@ -1,7 +1,10 @@
+from typing import List, Tuple, Any
 import random
 import string
 import base64
 import hashlib
+import sqlite3
+import pandas as pd
 
 
 def get_rand_str(n: int) -> str:
@@ -20,3 +23,21 @@ def compute_file_digest(file_path: str) -> str:
         file_digest = hashlib.sha256(f.read()).hexdigest()
 
     return file_digest
+
+
+def query_db(
+    db_path: str, query: str, return_df: bool = True
+) -> Tuple[List[List[Any]], List[str]] | pd.DataFrame:
+    db_conn = sqlite3.connect(database=db_path)
+    cursor = db_conn.cursor()
+
+    res = cursor.execute(query)
+    rows = res.fetchall()
+    column_names = [col[0] for col in cursor.description]
+
+    db_conn.close()
+
+    if return_df:
+        return pd.DataFrame(data=rows, columns=column_names)
+    else:
+        return rows, column_names

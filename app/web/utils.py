@@ -1,5 +1,4 @@
 from typing import Tuple, List
-import os
 import sqlite3
 import pandas as pd
 import random
@@ -8,6 +7,13 @@ from loguru import logger
 from dataclasses import dataclass
 
 from app.web.storage.docs_db import DocMetadata
+from app.web.config import (
+    ETF_DB,
+    DISPLAY_TABLE,
+    RETRIEVER_DOCSTORE_PATH,
+    RETRIEVER_VECTORSTORE_COLLECTION,
+    RETRIEVER_VECTORSTORE_PATH,
+)
 from app.backend.retrievers import MultiModalChromaRetriever
 from app.backend.chats.docqa import DocumentsQAChat
 
@@ -24,17 +30,17 @@ def get_rand_str(n: int) -> str:
 
 
 def load_etf_db() -> pd.DataFrame:
-    conn = sqlite3.Connection(os.environ["ETF_DB"])
-    etf_data_df = pd.read_sql(f"select * from {os.environ['DISPLAY_TABLE']}", con=conn)
+    conn = sqlite3.Connection(ETF_DB)
+    etf_data_df = pd.read_sql(f"select * from {DISPLAY_TABLE}", con=conn)
 
     return etf_data_df
 
 
 def create_docqa_chat(doc_metadata: DocMetadata) -> DocumentsQAChat:
     retriever = MultiModalChromaRetriever(
-        chroma_store=os.environ["RETRIEVER_VECTORSTORE_PATH"],
-        local_store=os.environ["RETRIEVER_DOCSTORE_PATH"],
-        collection=os.environ["RETRIEVER_VECTORSTORE_COLLECTION"],
+        chroma_store=RETRIEVER_VECTORSTORE_PATH,
+        local_store=RETRIEVER_DOCSTORE_PATH,
+        collection=RETRIEVER_VECTORSTORE_COLLECTION,
         top_k=doc_metadata.top_k,
         source_id=doc_metadata.vectorstore_source_id,
     )

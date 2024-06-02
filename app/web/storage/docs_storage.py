@@ -1,13 +1,20 @@
 from typing import List, Tuple
 import os
 from io import BytesIO
-import base64
 import shutil
-from fitz import Document
-import math
 from loguru import logger
+from dotenv import load_dotenv
 
 from app.web.utils import get_rand_str
+from app.web.config import (
+    DOC_DB,
+    BUCKET_URL,
+    BUCKET_NAME,
+    SPLITTERS_CACHE,
+    RETRIEVER_DOCSTORE_PATH,
+    RETRIEVER_VECTORSTORE_COLLECTION,
+    RETRIEVER_VECTORSTORE_PATH,
+)
 from app.web.storage.docs_db import ETFDocumentsDatabase, DocMetadata
 from app.web.storage.bucket import BucketStorage
 
@@ -22,16 +29,17 @@ TMP_WORKING_FOLDER = "work_dir"
 # Wrapper for adding, retrieving and/or updating etf docs
 class ETFDocStorage:
     def __init__(self) -> None:
-        self.docs_db = ETFDocumentsDatabase(db_path=os.environ.get("DOC_DB"))
+        load_dotenv(override=True)
+        self.docs_db = ETFDocumentsDatabase(db_path=DOC_DB)
         self.docs_bucket = BucketStorage(
-            url=os.environ.get("BUCKET_URL"),
+            url=BUCKET_URL,
             key=os.environ.get("BUCKET_KEY"),
             secret=os.environ.get("BUCKET_SECRET"),
         )
         self.retriever = MultiModalChromaRetriever(
-            chroma_store=os.environ["RETRIEVER_VECTORSTORE_PATH"],
-            local_store=os.environ["RETRIEVER_DOCSTORE_PATH"],
-            collection=os.environ["RETRIEVER_VECTORSTORE_COLLECTION"],
+            chroma_store=RETRIEVER_VECTORSTORE_PATH,
+            local_store=RETRIEVER_DOCSTORE_PATH,
+            collection=RETRIEVER_VECTORSTORE_COLLECTION,
         )
 
     # Add to bucket, # add to vector store, # add to db
@@ -48,7 +56,7 @@ class ETFDocStorage:
     ) -> int | None:
 
         doc_id = None
-        bucket = os.environ.get("BUCKET_NAME")
+        bucket = BUCKET_NAME
 
         try:
             bucket_file = self.docs_bucket.add_file(bucket=bucket, data=data)
@@ -59,14 +67,14 @@ class ETFDocStorage:
         try:
             if split_by == "bypage":
                 splitter = MultiModalPageSplitPDFSplitter(
-                    work_dir=os.environ["SPLITTERS_CACHE"],
+                    work_dir=SPLITTERS_CACHE,
                     extract_images=multimodal,
                     filter_captions=multimodal,
                 )
 
             elif split_by == "bylayout":
                 splitter = MultiModalPDFSplitter(
-                    work_dir=os.environ["SPLITTERS_CACHE"],
+                    work_dir=SPLITTERS_CACHE,
                     max_chunk_size=3000,
                     min_chunk_size=0,
                     extract_images=multimodal,

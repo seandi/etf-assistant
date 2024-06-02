@@ -57,7 +57,7 @@ I used a local MinIO service as the blob storage for the project. You can replic
 5. [Optional] enable the service to automatically start on reboot with `sudo systemctl enable minio.service`
 
 #### Config file
-Create a `.env` file with all configurations; a `sample_env` is provided as reference which only requires to add your private keys for OpenAI and Langfuse and user/password for MinIO. 
+Create a `.env` file with all private keys (i.e. OpenAI, Blob storage, etc.); a `sample_env` is provided with the list of fields to set.
 
 #### Sample data
 A `sample_data.zip` file is provided with a few sample data that are enough to test the main functionalities. 

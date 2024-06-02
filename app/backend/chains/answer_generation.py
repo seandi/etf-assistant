@@ -54,12 +54,10 @@ Suggestions:
 class AnswerGenerationChain:
     def __init__(
         self,
-        tables_description: str,
         memory: BaseChatMemory | None = None,
         max_rows_to_pass: int = 3,
     ) -> None:
 
-        self.tables_description = tables_description
         # Memory is externally managed
         self.memory = memory
         self.max_rows_to_pass = max_rows_to_pass

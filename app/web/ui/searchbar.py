@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import os
+from app.web.config import UI_ROOT_URL, ANALYTICS_PAGE_PATH
 
 
 def make_searchbar(etf_df: pd.DataFrame, name: str, go_new_page: bool = True):
@@ -33,8 +33,8 @@ def make_searchbar(etf_df: pd.DataFrame, name: str, go_new_page: bool = True):
     with cgo:
         if go_new_page:
             st.link_button(
-                url=os.environ["UI_ROOT_URL"]
-                + os.environ["ANALYTICS_PAGE_PATH"]
+                url=UI_ROOT_URL
+                + ANALYTICS_PAGE_PATH
                 + f"/?isin={st.session_state.get(search_key, '')}",
                 disabled=st.session_state[search_key] is None,
                 label="Go to Analytics",

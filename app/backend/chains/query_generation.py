@@ -45,11 +45,11 @@ class answer_directly(BaseModel):
 class QueryGenerationChain:
     def __init__(
         self,
-        tables_description: str,
+        db_description: str,
         memory: BaseChatMemory | None = None,
     ) -> None:
 
-        self.tables_description = tables_description
+        self.db_description = db_description
 
         # Memory is externally managed
         self.memory = memory
@@ -77,7 +77,7 @@ class QueryGenerationChain:
         tool_calls = self.chain.invoke(
             {
                 "question": question,
-                "tables": self.tables_description,
+                "tables": self.db_description,
                 "dialect": "sqlite",
             },
             config={"callbacks": callbacks},
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     from langchain.memory import ConversationBufferWindowMemory
 
     chat = QueryGenerationChain(
-        tables_description=TABLES_DESCRIPTION,
+        db_description=TABLES_DESCRIPTION,
         memory=ConversationBufferWindowMemory(
             input_key="question",
             output_key="answer",

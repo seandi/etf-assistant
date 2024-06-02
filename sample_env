@@ -3,25 +3,5 @@ OPENAI_API_KEY = missing
 LANGFUSE_SK = missing
 LANGFUSE_PK = missing
 
-
-UI_ROOT_URL = "http://localhost:8501"
-SCREENER_PAGE_PATH = "/ETF_Screener"
-ANALYTICS_PAGE_PATH = "/ETF_Analytics"
-
-ETF_DB = "data/sqlite/etf.sqlite3"
-DOC_DB = "data/sqlite/doc.sqlite3"
-DISPLAY_TABLE = "etf_search_data"
-
-
-BUCKET_URL = "localhost:9000"
 BUCKET_KEY = missing
 BUCKET_SECRET = missing
-BUCKET_NAME = "etfdocs"
-
-RETRIEVER_VECTORSTORE_PATH = "data/retriever/chromadb"
-RETRIEVER_DOCSTORE_PATH = "data/retriever/file_stores"
-RETRIEVER_VECTORSTORE_COLLECTION = "doc_qa_v1.1"
-
-SPLITTERS_CACHE = "data/splitters_cache"
-
-DOC_VIEW_MAX_SIZE = "1048576"

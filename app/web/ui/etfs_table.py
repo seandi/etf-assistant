@@ -1,10 +1,8 @@
 import streamlit as st
-import os
 import pandas as pd
-from dotenv import load_dotenv
+from app.web.config import UI_ROOT_URL, ANALYTICS_PAGE_PATH
 
-load_dotenv()
-DETILS_PAGE_URL = os.environ["UI_ROOT_URL"] + os.environ["ANALYTICS_PAGE_PATH"]
+DETILS_PAGE_URL = UI_ROOT_URL + ANALYTICS_PAGE_PATH
 
 EXCHANGE_COLUMNS = [
     "Borsa Italiana",

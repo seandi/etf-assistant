@@ -1,5 +1,4 @@
-from typing import List, Tuple, Any, Dict
-import os
+from typing import Tuple
 import pandas as pd
 import random
 from loguru import logger
@@ -7,68 +6,23 @@ from loguru import logger
 
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_community.utilities.sql_database import SQLDatabase
-from app.backend.chains import QueryGenerationChain, AnswerGenerationChain
+from app.backend.chains import (
+    QueryGenerationChain,
+    AnswerGenerationChain,
+)
 from app.backend.prompts.etf import TABLES_DESCRIPTION, UNIQUE_COLUMNS
-
-MAX_ROWS_TO_PASS = 3
-N_SUGGESTIONS = 3
-COLUMNS_TO_PASS = ["isin", "name"]
-SEARCH_TABLES = ["etf_search_data"]
-
-import sqlite3
-
-
-class ETFDatabase:
-    def __init__(self, db_path: str, tables_description: Dict[str, str]) -> None:
-        self.db_path = db_path
-        self.tables_description = tables_description
-
-    def run_query(
-        self, query, return_df: bool = True
-    ) -> pd.DataFrame | Tuple[List[List[Any]], List[str]]:
-        db_conn = sqlite3.connect(database=self.db_path)
-        cursor = db_conn.cursor()
-
-        res = cursor.execute(query)
-        rows = res.fetchall()
-        column_names = [col[0] for col in cursor.description]
-
-        db_conn.close()
-
-        if return_df:
-            return pd.DataFrame(data=rows, columns=column_names)
-        else:
-            return rows, column_names
-
-    def generate_tables_description(
-        self,
-        tables: List[str],
-    ) -> str:
-
-        db = SQLDatabase.from_uri(
-            "sqlite:///" + self.db_path,
-            view_support=True,
-            sample_rows_in_table_info=0,
-        )
-
-        tables_info = []
-
-        for table in tables:
-            if table not in self.tables_description:
-                logger.error(f"Table {table} not found!")
-
-            schema = db.get_table_info_no_throw(table_names=[table])
-            tables_info.append(self.tables_description[table] + "\n" + schema)
-
-        return "\n\n".join(tables_info)
+from app.backend.utils import query_db
+from app.backend.config import (
+    MAX_ROWS_TO_PASS,
+    N_SUGGESTIONS,
+    COLUMNS_TO_PASS,
+    SEARCH_TABLES,
+    ETF_DB_PATH,
+)
 
 
 class ETFSearchChat:
     def __init__(self) -> None:
-
-        self.etf_db = ETFDatabase(
-            db_path=os.environ["ETF_DB"], tables_description=TABLES_DESCRIPTION
-        )
 
         self.memory = ConversationBufferWindowMemory(
             input_key="question",
@@ -77,15 +31,11 @@ class ETFSearchChat:
             k=5,
         )
 
-        tables_description = self.etf_db.generate_tables_description(
-            tables=SEARCH_TABLES
-        )
-
         self.query_chain = QueryGenerationChain(
-            tables_description=tables_description, memory=self.memory
+            db_description=self._build_db_description(db_path=ETF_DB_PATH),
+            memory=self.memory,
         )
         self.answer_chain = AnswerGenerationChain(
-            tables_description=tables_description,
             memory=self.memory,
             max_rows_to_pass=MAX_ROWS_TO_PASS,
         )
@@ -100,7 +50,7 @@ class ETFSearchChat:
         if query is None:
             etfs_found_df = None
         else:
-            etfs_found_df = self.etf_db.run_query(query=query)
+            etfs_found_df = query_db(db_path=ETF_DB_PATH, query=query)
             # print(etfs_found_df.columns.to_list())
             results_to_pass = etfs_found_df.drop(
                 columns=[
@@ -136,6 +86,25 @@ class ETFSearchChat:
         differing_columns = [c for c in differing_columns if c not in UNIQUE_COLUMNS]
 
         return random.sample(differing_columns, k=min(n, len(differing_columns)))
+
+    @staticmethod
+    def _build_db_description(db_path) -> str:
+        db = SQLDatabase.from_uri(
+            "sqlite:///" + db_path,
+            view_support=True,
+            sample_rows_in_table_info=0,
+        )
+
+        tables_info = []
+
+        for table in SEARCH_TABLES:
+            if table not in TABLES_DESCRIPTION:
+                logger.error(f"Table {table} not found!")
+
+            schema = db.get_table_info_no_throw(table_names=[table])
+            tables_info.append(TABLES_DESCRIPTION[table] + "\n" + schema)
+
+        return "\n\n".join(tables_info)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,6 @@ from app.web.ui import (
     display_doc_view,
 )
 from app.web.ui.documents import WELCOME_MESSAGE_DOC_QA
-from app.backend.chats.docqa import DocumentsQAChat
 
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 st.markdown(

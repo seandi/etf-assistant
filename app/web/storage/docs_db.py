@@ -146,10 +146,9 @@ class ETFDocumentsDatabase:
 
 
 if __name__ == "__main__":
-    import dotenv, os
+    from app.web.config import DOC_DB
 
-    dotenv.load_dotenv(override=True)
-    db = ETFDocumentsDatabase(os.environ["DOC_DB"])
+    db = ETFDocumentsDatabase(DOC_DB)
 
     isin = "ISIN"
     doc_id = db.add_new_doc("A", "B", "c")

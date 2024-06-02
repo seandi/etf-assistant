@@ -1,6 +1,5 @@
 import streamlit as st
 from dotenv import load_dotenv
-import os
 
 from app.web.utils import load_etf_db
 from app.web.ui import make_searchbar

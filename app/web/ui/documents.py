@@ -1,14 +1,12 @@
 import streamlit as st
 import base64
 from typing import Tuple, List
-import os
-from loguru import logger
 from fitz import Document
 import math
 
 from app.web.storage.docs_db import DocMetadata
 from app.web.utils import create_docqa_chat
-
+from app.web.config import DOC_VIEW_MAX_SIZE
 
 WELCOME_MESSAGE_DOC_QA = """Hi, I can help you in finding information in this document. Do you have any question?"""
 
@@ -61,7 +59,7 @@ def display_doc_panel(doc: Tuple[DocMetadata, bytes], collapsed: bool = False):
             else:
                 st.session_state.active_doc = doc_id
                 st.session_state.doc_view_data = split_document(
-                    doc_data=doc_data, max_size=int(os.environ["DOC_VIEW_MAX_SIZE"])
+                    doc_data=doc_data, max_size=int(DOC_VIEW_MAX_SIZE)
                 )
 
                 if doc_id not in st.session_state.conversations:
