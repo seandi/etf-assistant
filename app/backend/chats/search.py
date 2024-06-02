@@ -9,7 +9,9 @@ from langchain_community.utilities.sql_database import SQLDatabase
 from app.backend.chains import (
     QueryGenerationChain,
     AnswerGenerationChain,
+    FilterExtractionChain,
 )
+from app.backend.retrievers.correction_catalog import DBValuesCatalog
 from app.backend.prompts.etf import TABLES_DESCRIPTION, UNIQUE_COLUMNS
 from app.backend.utils import query_db
 from app.backend.config import (
@@ -18,6 +20,7 @@ from app.backend.config import (
     COLUMNS_TO_PASS,
     SEARCH_TABLES,
     ETF_DB_PATH,
+    CATALOG_COLUMNS,
 )
 
 
@@ -40,6 +43,9 @@ class ETFSearchChat:
             max_rows_to_pass=MAX_ROWS_TO_PASS,
         )
 
+        self.filter_chain = FilterExtractionChain()
+        self.correction_catalog = DBValuesCatalog()
+
     def chat(self, question: str) -> Tuple[str, pd.DataFrame | None]:
         query, answer = self.query_chain.run(question=question)
         logger.info(f"Generated the following query: {query}")
@@ -50,8 +56,26 @@ class ETFSearchChat:
         if query is None:
             etfs_found_df = None
         else:
+            filters = self.filter_chain.run(query=query)
+
+            for f in filters.filters:
+                if f.column in CATALOG_COLUMNS:
+                    correction = self.correction_catalog.get_correction(
+                        column=f.column, value=f.value
+                    )
+
+                    if correction is not None and correction != f.value:
+                        logger.info(f"{f.value} -> {correction}")
+
+                    query = query.replace(
+                        "'" + f.value.replace("'", "") + "'",
+                        "'" + correction.replace("'", "") + "'",
+                    )
+
+            logger.info(f"Corrected query: {query}")
+
             etfs_found_df = query_db(db_path=ETF_DB_PATH, query=query)
-            # print(etfs_found_df.columns.to_list())
+
             results_to_pass = etfs_found_df.drop(
                 columns=[
                     c

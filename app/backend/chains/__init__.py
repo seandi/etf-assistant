@@ -1,2 +1,3 @@
 from .query_generation import QueryGenerationChain
 from .answer_generation import AnswerGenerationChain
+from .query_filter import FilterExtractionChain

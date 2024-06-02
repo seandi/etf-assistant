@@ -13,6 +13,8 @@ from langchain.memory.chat_memory import BaseChatMemory
 from langchain_openai import ChatOpenAI
 from langchain_core.pydantic_v1 import BaseModel, Field
 
+from app.backend.config import DB_DIALECT
+
 
 QUERY_GENERATION_SYSTEM_PROMPT = """You are assistant designed to answer user questions. 
 You have access to a {dialect} database of ETFs with tables described below. 
@@ -78,7 +80,7 @@ class QueryGenerationChain:
             {
                 "question": question,
                 "tables": self.db_description,
-                "dialect": "sqlite",
+                "dialect": DB_DIALECT,
             },
             config={"callbacks": callbacks},
         )

@@ -96,7 +96,7 @@ This is achieved by provided the LLM with two tools/functions, one for executing
 
 Simple prompt engineering is a great starting point for getting LLMs to generate good answers. However, the chatbot significantly benefits from both pre-processing generated queries before execution and post-processing their results before creating the final answer.
 
-#### Correcting the Queries (Work in progress)
+#### Correcting the Queries
 When the user question requires generating a query that filters on specific values of one or more columns, the LLM often struggles to create a correct query. For example, if the user asks to "return all distributing ETFs," the LLM should generate the following query:
 
 ```
@@ -105,7 +105,9 @@ WHERE etf_table.dividends = 'distributing'
 ```
 In this case, the dividends column is categorical with values that can assume only one of N possible values. Unless the LLM is informed in the prompt about all possible categories, it has no way of knowing how to construct this filter (should it use 'Distribute', 'distributing', or 'distr'?).
 
-> work in progress
+To fix this issue, a **Correction Chain** was implemented. In this chain, the LLM is prompted to extract all occurrences of filters on the value of a column that appear in the query (i.e., WHERE LIKE clause) and report each column and value of the filter. Each column value used as a filter for a categorical column is then replaced with the actual category closest to it among the N possible categories for that specific column. The replacement category is identified by a similarity search between the value in the query and a vector database containing embeddings for all possible categories for each column.
+
+For example, if the query initially contained a filter on the currency being'euros', that word would be replaced with the closest option among the possible values in the database for the currency column, which is 'EUR'.
 
 
 
