@@ -2,10 +2,12 @@ from typing import Tuple
 import pandas as pd
 import random
 from loguru import logger
-
+import os
 
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_community.utilities.sql_database import SQLDatabase
+from langfuse.callback import CallbackHandler
+
 from app.backend.chains import (
     QueryGenerationChain,
     AnswerGenerationChain,
@@ -27,6 +29,11 @@ from app.backend.config import (
 class ETFSearchChat:
     def __init__(self) -> None:
 
+        self.langfuse_handler = CallbackHandler(
+            public_key=os.environ["LANGFUSE_PK"],
+            secret_key=os.environ["LANGFUSE_SK"],
+        )
+
         self.memory = ConversationBufferWindowMemory(
             input_key="question",
             output_key="answer",
@@ -47,7 +54,9 @@ class ETFSearchChat:
         self.correction_catalog = DBValuesCatalog()
 
     def chat(self, question: str) -> Tuple[str, pd.DataFrame | None]:
-        query, answer = self.query_chain.run(question=question)
+        query, answer = self.query_chain.run(
+            question=question, callbacks=[self.langfuse_handler]
+        )
         logger.info(f"Generated the following query: {query}")
 
         if query is None and answer is None:
@@ -56,7 +65,9 @@ class ETFSearchChat:
         if query is None:
             etfs_found_df = None
         else:
-            filters = self.filter_chain.run(query=query)
+            filters = self.filter_chain.run(
+                query=query, callbacks=[self.langfuse_handler]
+            )
 
             for f in filters.filters:
                 if f.column in CATALOG_COLUMNS:
@@ -67,10 +78,10 @@ class ETFSearchChat:
                     if correction is not None and correction != f.value:
                         logger.info(f"{f.value} -> {correction}")
 
-                    query = query.replace(
-                        "'" + f.value.replace("'", "") + "'",
-                        "'" + correction.replace("'", "") + "'",
-                    )
+                        query = query.replace(
+                            "'" + f.value.replace("'", "") + "'",
+                            "'" + correction.replace("'", "") + "'",
+                        )
 
             logger.info(f"Corrected query: {query}")
 
@@ -95,6 +106,7 @@ class ETFSearchChat:
                 question=question,
                 results=results_to_pass,
                 suggestions=suggestions,
+                callbacks=[self.langfuse_handler],
             )
 
         self.memory.save_context(

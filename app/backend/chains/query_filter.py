@@ -35,7 +35,7 @@ class FilterExtractionChain:
             TEMPLATE
         ) | ChatOpenAI().with_structured_output(QueryFilters, method="json_mode")
 
-    def run(self, query, callbacks: Dict | None = None) -> QueryFilters:
+    def run(self, query, callbacks: List = []) -> QueryFilters:
         return self.chain.invoke(
             {"query": query, "dialect": DB_DIALECT},
             config={"callbacks": callbacks},
