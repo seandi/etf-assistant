@@ -2,3 +2,16 @@
 ---
 
 @import "{{ site.theme }}";
+
+.inner {
+  width: 800px;
+  margin: 0 auto;
+}
+
+#container .inner img {
+  max-width: 100%;
+}
+
+#container .inner video {
+  max-width: 100%;
+}
